@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonczoDB", "MonczoDB\MonczoDB.csproj", "{25E13087-C530-4280-8301-C9F63DC0DD75}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonczoDBTest", "MonczoDBTest\MonczoDBTest.csproj", "{DF09CDC6-A6E8-4E68-AA7C-31EB88AF1B21}"
+	ProjectSection(ProjectDependencies) = postProject
+		{25E13087-C530-4280-8301-C9F63DC0DD75} = {25E13087-C530-4280-8301-C9F63DC0DD75}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{25E13087-C530-4280-8301-C9F63DC0DD75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25E13087-C530-4280-8301-C9F63DC0DD75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25E13087-C530-4280-8301-C9F63DC0DD75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25E13087-C530-4280-8301-C9F63DC0DD75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF09CDC6-A6E8-4E68-AA7C-31EB88AF1B21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF09CDC6-A6E8-4E68-AA7C-31EB88AF1B21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF09CDC6-A6E8-4E68-AA7C-31EB88AF1B21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF09CDC6-A6E8-4E68-AA7C-31EB88AF1B21}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B07B4C60-181C-467E-BF9D-AE6D504D537C}
+	EndGlobalSection
+EndGlobal
