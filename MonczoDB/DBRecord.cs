@@ -12,7 +12,7 @@ namespace MonczoDB
     [Serializable]
     public class DBRecord
     {
-        public Dictionary<string, dynamic> fields;
+        private Dictionary<string, dynamic> fields;
 
         public DBRecord(List<string> columns)
         {
@@ -40,9 +40,19 @@ namespace MonczoDB
                 fields.Add(columns[i], values[i]);
         }
 
+        public List<dynamic> GetValues()
+        {
+            return fields.Values.ToList();
+        }
+
         public T Get<T>(string column)
         {
             return (T)fields[column];
+        }
+
+        public dynamic Get(string column)
+        {
+            return fields[column];
         }
 
         public void Set(string column, dynamic value)

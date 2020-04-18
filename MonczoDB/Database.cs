@@ -12,21 +12,55 @@ namespace MonczoDB
     [Serializable]
     public class Database
     {
-        public List<string> columns;
+        private List<string> columns;
         public List<DBRecord> records;
+
+        public Dictionary<string, Type> columnTypes;
+
+        public Database()
+        {
+            Initialize();
+        }
+        public Database(List<string> columns)
+        {
+            Initialize();
+            SetColumns(columns);
+        }
 
         public void Initialize()
         {
-            columns = new List<string>();
             records = new List<DBRecord>();
+        }
+
+        public List<string> GetColumns()
+        {
+            return columns;
         }
 
         public void SetColumns(List<string> cols)
         {
             columns = cols;
+            columnTypes = new Dictionary<string, Type>(cols.Count);
         }
 
-        // TODO: Convert this to insert records directly into file
+        public void AddColumn(string col)
+        {
+            columns.Append(col);
+            columnTypes.Add(col, null);
+        }
+
+        public void RemoveColumn(string col)
+        {
+            columns.Remove(col);
+            columnTypes.Remove(col);
+        }
+
+        public void RemoveColumnAt(int index)
+        {
+            columnTypes.Remove(columns[index]);
+            columns.RemoveAt(index);
+        }
+
         public void InsertRecord(int index, params dynamic[] values)
         {
             records.Insert(index, new DBRecord(columns, values));
@@ -35,6 +69,21 @@ namespace MonczoDB
         public void AddRecord(params dynamic[] values)
         {
             records.Add(new DBRecord(columns, values));
+        }
+
+        public void RemoveRecordAt(int index)
+        {
+            records.RemoveAt(index);
+        }
+
+        public List<DBRecord> SortBy(string column, SortingDirection direction)
+        {
+            List<DBRecord> sortedRecords = records;
+
+            RecordComparer comparer = new RecordComparer(column, direction);
+            sortedRecords.Sort(comparer);
+
+            return sortedRecords;
         }
 
         public void Serialize(Stream stream)
