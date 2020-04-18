@@ -90,14 +90,17 @@ namespace MonczoDB
             return records.Where(r => Predicate(r.Get(column))).ToList();
         }
 
-        public List<DBRecord> SortBy(string column, SortingDirection direction)
+        public Task<List<DBRecord>> SortByAsync(string column, SortingDirection direction)
         {
             List<DBRecord> sortedRecords = new List<DBRecord>(records);
+            Task<List<DBRecord>> task = Task<List<DBRecord>>.Factory.StartNew(() =>
+            {
+                RecordComparer comparer = new RecordComparer(column, direction);
+                sortedRecords.Sort(comparer);
+                return sortedRecords;
+            });
 
-            RecordComparer comparer = new RecordComparer(column, direction);
-            sortedRecords.Sort(comparer);
-
-            return sortedRecords;
+            return task;
         }
 
         public void Serialize(Stream stream)
