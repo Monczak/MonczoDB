@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,8 +18,6 @@ namespace MonczoDBTest
             if (File.Exists("test.dat"))
             {
                 db = Database.Deserialize(File.OpenRead("test.dat"));
-
-                db.records = db.FilterBy<string>("Name", name => name.Length > 5);
 
                 Console.WriteLine(string.Join("\t", db.GetColumns()));
 

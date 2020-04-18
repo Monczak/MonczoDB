@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -74,6 +75,14 @@ namespace MonczoDB
         public void RemoveRecordAt(int index)
         {
             records.RemoveAt(index);
+        }
+
+        public BitArray GetFilterMask<T>(string column, Func<T, bool> Predicate)
+        {
+            BitArray result = new BitArray(records.Count);
+            for (int i = 0; i < records.Count; i++)
+                result[i] = Predicate(records[i].Get(column));
+            return result;
         }
 
         public List<DBRecord> FilterBy<T>(string column, Func<T, bool> Predicate)
