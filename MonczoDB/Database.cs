@@ -76,9 +76,14 @@ namespace MonczoDB
             records.RemoveAt(index);
         }
 
+        public List<DBRecord> FilterBy<T>(string column, Func<T, bool> Predicate)
+        {
+            return records.Where(r => Predicate(r.Get(column))).ToList();
+        }
+
         public List<DBRecord> SortBy(string column, SortingDirection direction)
         {
-            List<DBRecord> sortedRecords = records;
+            List<DBRecord> sortedRecords = new List<DBRecord>(records);
 
             RecordComparer comparer = new RecordComparer(column, direction);
             sortedRecords.Sort(comparer);

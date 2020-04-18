@@ -18,7 +18,7 @@ namespace MonczoDBTest
             {
                 db = Database.Deserialize(File.OpenRead("test.dat"));
 
-                db.SortBy("Name", SortingDirection.Ascending);
+                db.records = db.FilterBy<string>("Name", name => name.Length > 5);
 
                 Console.WriteLine(string.Join("\t", db.GetColumns()));
 
