@@ -19,19 +19,25 @@ namespace MonczoDBTest
             if (File.Exists("test.dat"))
             {
                 Console.WriteLine("Loading from file...");
-                db = Database.Deserialize(File.OpenRead("test.dat"));
+
+                Task<Database> loadTask = Database.DeserializeAsync(File.OpenRead("test.dat"));
+                loadTask.Wait();
+                db = loadTask.Result;
+
                 Console.WriteLine("Loaded!");
 
                 Console.WriteLine(string.Join("\t", db.GetColumns()));
-                foreach (DBRecord record in db.records)
+                for (int i = 0; i < db.records.Count; i++)
                 {
-                    foreach (dynamic val in record.GetValues())
+                    foreach (dynamic val in db.records[i].GetValues())
                     {
                         Console.Write(Convert.ToString(val));
                         Console.Write("\t");
                     }
 
                     Console.WriteLine();
+                    
+
                 }
             }
             else
@@ -44,12 +50,16 @@ namespace MonczoDBTest
                 db.SetColumns(new List<string> { "Id", "Name", "Last Name", "Orders" });
 
                 Random random = new Random();
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < 10000; i++)
                 {
-                    db.AddRecord(i + 1, "Blahus", "Maximus", random.Next(100));
+                    db.AddRecord(i + 1, "Blahus", "Maximus", random.Next(10000));
                 }
 
-                db.Serialize(File.OpenWrite("test.dat"));
+                Console.WriteLine("Saving...");
+                Task saveTask = db.SerializeAsync(File.OpenWrite("test.dat"));
+                saveTask.Wait();
+                Console.WriteLine("Saved!");
+
                 Console.WriteLine("Finished writing test db!");
             }
 

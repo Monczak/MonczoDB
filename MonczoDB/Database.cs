@@ -78,12 +78,16 @@ namespace MonczoDB
             records.RemoveAt(index);
         }
 
-        public BitArray GetFilterMask<T>(string column, Func<T, bool> Predicate)
+        public Task<BitArray> GetFilterMaskAsync<T>(string column, Func<T, bool> Predicate)
         {
             BitArray result = new BitArray(records.Count);
-            for (int i = 0; i < records.Count; i++)
-                result[i] = Predicate(records[i].Get(column));
-            return result;
+            Task<BitArray> task = Task<BitArray>.Factory.StartNew(() =>
+            {
+                for (int i = 0; i < records.Count; i++)
+                    result[i] = Predicate(records[i].Get(column));
+                return result;
+            });
+            return task;
         }
 
         public List<DBRecord> FilterBy<T>(string column, Func<T, bool> Predicate)
@@ -104,33 +108,43 @@ namespace MonczoDB
             return task;
         }
 
-        public void Serialize(Stream stream)
+        public Task SerializeAsync(Stream stream)
         {
-            using (stream)
+            Task task = Task.Factory.StartNew(() =>
             {
-                using (var gZipStream = new GZipStream(stream, CompressionMode.Compress))
+                using (stream)
                 {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(gZipStream, this);
+                    using (var gZipStream = new GZipStream(stream, CompressionMode.Compress))
+                    {
+                        BinaryFormatter formatter = new BinaryFormatter();
+                        formatter.Serialize(gZipStream, this);
+                    }
                 }
-            }
-            stream.Close();
+                stream.Close();
+            });
+
+            return task;
         }
 
-        public static Database Deserialize(Stream stream)
+        public static Task<Database> DeserializeAsync(Stream stream)
         {
             Database result = new Database();
 
-            using (stream)
+            Task<Database> task = Task<Database>.Factory.StartNew(() =>
             {
-                using (var gZipStream = new GZipStream(stream, CompressionMode.Decompress))
+                using (stream)
                 {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    result = (Database)formatter.Deserialize(gZipStream);
+                    using (var gZipStream = new GZipStream(stream, CompressionMode.Decompress))
+                    {
+                        BinaryFormatter formatter = new BinaryFormatter();
+                        result = (Database)formatter.Deserialize(gZipStream);
+                    }
                 }
-            }
+                stream.Close();
+                return result;
+            });
 
-            return result;
+            return task;
         }
     }
 }
