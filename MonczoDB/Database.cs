@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.IO.Compression;
 
 namespace MonczoDB
 {
@@ -107,20 +108,26 @@ namespace MonczoDB
         {
             using (stream)
             {
-                BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(stream, this);
+                using (var gZipStream = new GZipStream(stream, CompressionMode.Compress))
+                {
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    formatter.Serialize(gZipStream, this);
+                }
             }
             stream.Close();
         }
 
         public static Database Deserialize(Stream stream)
         {
-            Database result = (Database)Activator.CreateInstance(typeof(Database));
+            Database result = new Database();
 
             using (stream)
             {
-                BinaryFormatter formatter = new BinaryFormatter();
-                result = (Database)formatter.Deserialize(stream);
+                using (var gZipStream = new GZipStream(stream, CompressionMode.Decompress))
+                {
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    result = (Database)formatter.Deserialize(gZipStream);
+                }
             }
 
             return result;

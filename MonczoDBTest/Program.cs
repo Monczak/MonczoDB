@@ -36,6 +36,8 @@ namespace MonczoDBTest
             }
             else
             {
+                Console.WriteLine("Creating a test db...");
+
                 db = new Database();
                 db.Initialize();
 
@@ -48,6 +50,7 @@ namespace MonczoDBTest
                 }
 
                 db.Serialize(File.OpenWrite("test.dat"));
+                Console.WriteLine("Finished writing test db!");
             }
 
             Console.ReadKey();
