@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonczoDBTest", "MonczoDBTes
 		{25E13087-C530-4280-8301-C9F63DC0DD75} = {25E13087-C530-4280-8301-C9F63DC0DD75}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonczoDBInterface", "MonczoDBInterface\MonczoDBInterface.csproj", "{E993A6D4-D8DE-45BC-8D11-875495F9B52C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,10 @@ Global
 		{DF09CDC6-A6E8-4E68-AA7C-31EB88AF1B21}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF09CDC6-A6E8-4E68-AA7C-31EB88AF1B21}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF09CDC6-A6E8-4E68-AA7C-31EB88AF1B21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E993A6D4-D8DE-45BC-8D11-875495F9B52C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E993A6D4-D8DE-45BC-8D11-875495F9B52C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E993A6D4-D8DE-45BC-8D11-875495F9B52C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E993A6D4-D8DE-45BC-8D11-875495F9B52C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

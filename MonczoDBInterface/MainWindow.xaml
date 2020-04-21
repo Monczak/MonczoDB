@@ -1,0 +1,70 @@
+﻿<Window x:Class="MonczoDBInterface.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MonczoDBInterface"
+        mc:Ignorable="d"
+        Title="MonczoDB" Height="600" Width="1200">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="4*"/>
+        </Grid.ColumnDefinitions>
+        
+        <Rectangle Fill="#303030" Grid.Column="0"/>
+        
+        <Grid Grid.Column="0">
+            <Grid.Background>
+                <ImageBrush/>
+            </Grid.Background>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="0.6*"/>
+                <RowDefinition Height="1.15*"/>
+                <RowDefinition Height="1*"/>
+                <RowDefinition Height="30"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="0.7*"/>
+                    <RowDefinition Height="0.7*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="File" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFE2E2E2"/>
+
+                <Button x:Name="FileNewBtn" Grid.Row="1" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Width="100" Height="30" Content="New" Foreground="Black"/>
+                <Button x:Name="FileLoadBtn" Grid.Row="1" HorizontalAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center" Width="100" Height="30" Content="Load..." Foreground="Black"/>
+
+                <Button x:Name="FileSaveBtn" Grid.Row="2" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Width="100" Height="30" Content="Save" Foreground="Black"/>
+                <Button x:Name="FileSaveAsBtn" Grid.Row="2" HorizontalAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center" Width="100" Height="30" Content="Save As..." Foreground="Black"/>
+            </Grid>
+            
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="0.7*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Data" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFE2E2E2"/>
+
+                <Button x:Name="DataInsertRecordBtn" Grid.Row="1" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="100" Height="30" Content="Insert Record" Foreground="Black"/>
+                <Button x:Name="DataInsertColumnBtn" Grid.Row="1" HorizontalAlignment="Right" Margin="0,10,10,0" VerticalAlignment="Top" Width="100" Height="30" Content="Insert Column" Foreground="Black"/>
+                <Button x:Name="DataDeleteRecordBtn" Grid.Row="1" HorizontalAlignment="Left" Margin="10,0,0,10" VerticalAlignment="Bottom" Width="100" Height="30" Content="Delete Record" Foreground="Black"/>
+                <Button x:Name="DataDeleteColumnBtn" Grid.Row="1" HorizontalAlignment="Right" Margin="0,0,10,10" VerticalAlignment="Bottom" Width="100" Height="30" Content="Delete Column" Foreground="Black"/>
+
+                <Button x:Name="DataSortAscendingBtn" Grid.Row="2" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="100" Height="30" Content="Sort Ascending" Foreground="Black"/>
+                <Button x:Name="DataSortDescendingBtn" Grid.Row="2" HorizontalAlignment="Left" Margin="10,0,0,10" VerticalAlignment="Bottom" Width="100" Height="30" Content="Sort Descending" Foreground="Black"/>
+
+                <Button x:Name="DataFilterBtn" Grid.Row="2" HorizontalAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center" Width="100" Height="30" Content="Filter..." Foreground="Black"/>
+            
+            </Grid>
+
+            <Rectangle Grid.Row="3" Fill="#FFC9C9C9"/>
+            <TextBlock Text="Ready" FontSize="14" Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+        </Grid>
+
+    </Grid>
+</Window>

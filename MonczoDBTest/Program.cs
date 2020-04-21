@@ -50,9 +50,9 @@ namespace MonczoDBTest
                 db.SetColumns(new List<string> { "Id", "Name", "Last Name", "Orders" });
 
                 Random random = new Random();
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < 100000; i++)
                 {
-                    db.AddRecord(i + 1, "Blahus", "Maximus", random.Next(10000));
+                    db.AddRecord(i + 1, "Blahus", "Maximus", random.Next(100000));
                 }
 
                 Console.WriteLine("Saving...");
