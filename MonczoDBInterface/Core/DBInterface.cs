@@ -8,9 +8,11 @@ using MonczoDB;
 
 namespace MonczoDBInterface.Core
 {
-    public class DBWrapper
+    public class DBInterface
     {
         public static Database db;
+
+        public static string currentFilePath = null;
 
         public delegate void OnDBLoadedDelegate();
         public static event OnDBLoadedDelegate OnDBLoaded;
@@ -33,9 +35,26 @@ namespace MonczoDBInterface.Core
                 return;
             }
 
+            currentFilePath = path;
             OnDBLoaded?.Invoke();
+        }
 
-            return;
+        public static async Task SaveFile(string path)
+        {
+            Task saveTask;
+            try
+            {
+                saveTask = db.SerializeAsync(File.OpenWrite(path));
+                await saveTask;
+            }
+            catch (FileNotFoundException e)
+            {
+                return;
+            }
+            catch (Exception e)
+            {
+                return;
+            }
         }
     }
 }
