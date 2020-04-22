@@ -27,6 +27,13 @@ namespace MonczoDBInterface
         public bool isBusy = false;
         public bool hasFileLoaded = false;
 
+        public int visibleRecords = 25;
+        public int topRecordIndex = 0;
+
+        List<string> columns;
+
+        Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox> visibleCells;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -44,6 +51,69 @@ namespace MonczoDBInterface
             else
                 Title = $"MonczoDB - {text}";
         }
+
+        public async Task CreateNewDBGrid()
+        {
+            DBGrid.RowDefinitions.Clear();
+            DBGrid.ColumnDefinitions.Clear();
+
+            for (int i = 0; i < visibleRecords + 1; i++)
+            {
+                DBGrid.RowDefinitions.Add(new RowDefinition()
+                {
+                    MaxHeight = 100
+                });
+            }
+
+            columns = DBInterface.db.GetColumns();
+            for (int i = 0; i < columns.Count; i++)
+            {
+                DBGrid.ColumnDefinitions.Add(new ColumnDefinition()
+                {
+                    MaxWidth = 100
+                });
+
+                var box = new System.Windows.Controls.TextBox()
+                {
+                    Text = columns[i],
+                    FontSize = 14,
+                    Background = new SolidColorBrush(new Color() { R = 0xdd, G = 0xdd, B = 0xdd, A = 0xff })
+                };
+                DBGrid.Children.Add(box);
+                Grid.SetRow(box, 0);
+                Grid.SetColumn(box, i);
+            }
+            DBGrid.ColumnDefinitions.Add(new ColumnDefinition());
+        }
+
+        public async Task UpdateDBGrid()
+        {
+            if (visibleCells == null) visibleCells = new Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox>();
+
+            for (int i = topRecordIndex; i < Math.Min(DBInterface.db.records.Count, topRecordIndex + visibleRecords); i++)
+            {
+                for (int j = 0; j < columns.Count; j++)
+                {
+                    if (visibleCells.ContainsKey(new Tuple<int, int>(i - topRecordIndex, j)))
+                    {
+                        visibleCells[new Tuple<int, int>(i - topRecordIndex, j)].Text = Convert.ToString(DBInterface.db.records[i].Get(columns[j]));
+                    }
+                    else
+                    {
+                        var box = new System.Windows.Controls.TextBox()
+                        {
+                            Text = Convert.ToString(DBInterface.db.records[i].Get(columns[j])),
+                            FontSize = 14
+                        };
+                        DBGrid.Children.Add(box);
+                        visibleCells[new Tuple<int, int>(i - topRecordIndex, j)] = box;
+                        Grid.SetRow(box, i - topRecordIndex + 1);
+                        Grid.SetColumn(box, j);
+                    }
+                    
+                }
+            }
+        } 
 
         private async void FileNewBtn_Click(object sender, RoutedEventArgs e)
         {
@@ -73,13 +143,20 @@ namespace MonczoDBInterface
                         break;
                 }
 
-                UpdateStatusText($"Loading {System.IO.Path.GetFileName(filePath)}...");
-                await DBInterface.LoadFromFile(filePath);
-                UpdateStatusText("Ready");
-                isBusy = false;
-                hasFileLoaded = true;
+                if (result == System.Windows.Forms.DialogResult.OK)
+                {
+                    UpdateStatusText($"Loading {System.IO.Path.GetFileName(filePath)}...");
+                    await DBInterface.LoadFromFile(filePath);
+                    UpdateStatusText("Ready");
+                    isBusy = false;
+                    hasFileLoaded = true;
 
-                SetTitle(System.IO.Path.GetFileName(filePath));
+                    SetTitle(System.IO.Path.GetFileName(filePath));
+
+                    await CreateNewDBGrid();
+                    await UpdateDBGrid();
+                }
+                
             }
         }
 
@@ -169,6 +246,42 @@ namespace MonczoDBInterface
         private async void DataFilterBtn_Click(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        private async void DBGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (e.Delta < 0)
+            {
+                topRecordIndex++;
+                topRecordIndex = Math.Min(topRecordIndex, DBInterface.db.records.Count - visibleRecords);
+            }
+            else if (e.Delta > 0)
+            {
+                topRecordIndex--;
+                topRecordIndex = Math.Max(topRecordIndex, 0);
+            }
+
+            DBGridScrollBar.Value = (double)topRecordIndex / (DBInterface.db.records.Count - visibleRecords);
+
+            await UpdateDBGrid();
+        }
+
+        private async void DBGridScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            int newIndex;
+            try
+            {
+                newIndex = (int)Math.Round(e.NewValue * (DBInterface.db.records.Count - visibleRecords));
+                UpdateStatusText(newIndex.ToString());
+            }
+            catch (NullReferenceException)
+            {
+                return;
+            }
+
+            topRecordIndex = newIndex;
+
+            await UpdateDBGrid();
         }
     }
 }

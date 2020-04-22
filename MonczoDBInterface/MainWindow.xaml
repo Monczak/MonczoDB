@@ -67,8 +67,13 @@
             <TextBlock x:Name="StatusText" Text="Ready" FontSize="14" Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"/>
         </Grid>
 
-        <DataGrid Grid.Column="1" AlternatingRowBackground="#FFDDDDDD" AlternationCount="2">
+        <Grid x:Name="DBGrid" Grid.Column="1" ShowGridLines="True" PreviewMouseWheel="DBGrid_PreviewMouseWheel">
+            <Grid.RowDefinitions>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+            </Grid.ColumnDefinitions>
             
-        </DataGrid>
+        </Grid>
+        <ScrollBar Panel.ZIndex="-1" ViewportSize="0.1" Grid.Column="1" x:Name="DBGridScrollBar" HorizontalAlignment="Right" Margin="0,0,0,0" VerticalAlignment="Top" Height="559" Width="20" ValueChanged="DBGridScrollBar_ValueChanged"/>
     </Grid>
 </Window>
