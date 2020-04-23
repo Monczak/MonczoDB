@@ -64,6 +64,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Core\DBCell.cs" />
     <Compile Include="Core\DBInterface.cs" />
     <Compile Include="Core\FileLoadResult.cs" />
     <Compile Include="MainWindow.xaml.cs">

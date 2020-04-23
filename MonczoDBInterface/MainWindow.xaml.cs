@@ -32,7 +32,13 @@ namespace MonczoDBInterface
 
         List<string> columns;
 
-        Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox> visibleCells;
+        bool shiftPressed = false;
+
+        string selectedColumn = null;
+        int selectedRecord = -1;
+
+        Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox> cellIndices;
+        Dictionary<System.Windows.Controls.TextBox, DBCell> visibleCells;
 
         public MainWindow()
         {
@@ -52,10 +58,48 @@ namespace MonczoDBInterface
                 Title = $"MonczoDB - {text}";
         }
 
+        async void HandleColumnShiftClick(System.Windows.Controls.TextBox box, MouseButtonEventArgs e)
+        {
+            if (shiftPressed)
+            {
+                DeselectAll();
+                selectedColumn = box.Text;
+                UpdateStatusText($"Selected {selectedColumn}");
+                await SelectColumn(selectedColumn);
+            }
+        }
+
+        DBCell GetCellAt(int recordID, int column)
+        {
+            return visibleCells[cellIndices[new Tuple<int, int>(recordID, column)]];
+        }
+
+        public void DeselectAll()
+        {
+            foreach (DBCell cell in visibleCells.Values) cell.selected = false;
+            selectedColumn = null;
+            selectedRecord = -1;
+        }
+
+        public async Task SelectColumn(string column)
+        {
+            int colIndex = columns.IndexOf(column);
+            for (int i = 0; i < visibleRecords; i++)
+            {
+                GetCellAt(i, colIndex).selected = true;
+            }
+            await UpdateDBGrid();
+        }
+
         public async Task CreateNewDBGrid()
         {
+            topRecordIndex = 0;
+
             DBGrid.RowDefinitions.Clear();
             DBGrid.ColumnDefinitions.Clear();
+
+            cellIndices = new Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox>();
+            visibleCells = new Dictionary<System.Windows.Controls.TextBox, DBCell>();
 
             for (int i = 0; i < visibleRecords + 1; i++)
             {
@@ -79,6 +123,17 @@ namespace MonczoDBInterface
                     FontSize = 14,
                     Background = new SolidColorBrush(new Color() { R = 0xdd, G = 0xdd, B = 0xdd, A = 0xff })
                 };
+                box.PreviewMouseDown += (obj, e) => HandleColumnShiftClick((System.Windows.Controls.TextBox)obj, e);
+
+                if (!visibleCells.ContainsKey(box))
+                {
+                    visibleCells[box] = new DBCell()
+                    {
+                        column = columns[i],
+                        recordID = -1
+                    };
+                }
+
                 DBGrid.Children.Add(box);
                 Grid.SetRow(box, 0);
                 Grid.SetColumn(box, i);
@@ -88,15 +143,13 @@ namespace MonczoDBInterface
 
         public async Task UpdateDBGrid()
         {
-            if (visibleCells == null) visibleCells = new Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox>();
-
             for (int i = topRecordIndex; i < Math.Min(DBInterface.db.records.Count, topRecordIndex + visibleRecords); i++)
             {
                 for (int j = 0; j < columns.Count; j++)
                 {
-                    if (visibleCells.ContainsKey(new Tuple<int, int>(i - topRecordIndex, j)))
+                    if (cellIndices.ContainsKey(new Tuple<int, int>(i - topRecordIndex, j)))
                     {
-                        visibleCells[new Tuple<int, int>(i - topRecordIndex, j)].Text = Convert.ToString(DBInterface.db.records[i].Get(columns[j]));
+                        cellIndices[new Tuple<int, int>(i - topRecordIndex, j)].Text = Convert.ToString(DBInterface.db.records[i].Get(columns[j]));
                     }
                     else
                     {
@@ -105,12 +158,23 @@ namespace MonczoDBInterface
                             Text = Convert.ToString(DBInterface.db.records[i].Get(columns[j])),
                             FontSize = 14
                         };
+
                         DBGrid.Children.Add(box);
-                        visibleCells[new Tuple<int, int>(i - topRecordIndex, j)] = box;
+                        cellIndices[new Tuple<int, int>(i - topRecordIndex, j)] = box;
                         Grid.SetRow(box, i - topRecordIndex + 1);
                         Grid.SetColumn(box, j);
+
+                        if (!visibleCells.ContainsKey(box))
+                        {
+                            visibleCells[box] = new DBCell()
+                            {
+                                column = columns[j],
+                                recordID = i
+                            };
+                        }
                     }
-                    
+
+                    cellIndices[new Tuple<int, int>(i - topRecordIndex, j)].Background = new SolidColorBrush() { Color = GetCellAt(i - topRecordIndex, j).selected ? Color.FromRgb(210, 210, 210) : Color.FromRgb(255, 255, 255) };
                 }
             }
         } 
@@ -235,12 +299,24 @@ namespace MonczoDBInterface
 
         private async void DataSortAscendingBtn_Click(object sender, RoutedEventArgs e)
         {
-
+            if (selectedColumn != null)
+            {
+                UpdateStatusText($"Sorting by {selectedColumn}...");
+                DBInterface.db.records = await DBInterface.db.SortByAsync(selectedColumn, SortingDirection.Ascending);
+                UpdateStatusText("Ready");
+                await UpdateDBGrid();
+            }
         }
 
         private async void DataSortDescendingBtn_Click(object sender, RoutedEventArgs e)
         {
-
+            if (selectedColumn != null)
+            {
+                UpdateStatusText($"Sorting by {selectedColumn}...");
+                DBInterface.db.records = await DBInterface.db.SortByAsync(selectedColumn, SortingDirection.Descending);
+                UpdateStatusText("Ready");
+                await UpdateDBGrid();
+            }
         }
 
         private async void DataFilterBtn_Click(object sender, RoutedEventArgs e)
@@ -272,7 +348,6 @@ namespace MonczoDBInterface
             try
             {
                 newIndex = (int)Math.Round(e.NewValue * (DBInterface.db.records.Count - visibleRecords));
-                UpdateStatusText(newIndex.ToString());
             }
             catch (NullReferenceException)
             {
@@ -282,6 +357,18 @@ namespace MonczoDBInterface
             topRecordIndex = newIndex;
 
             await UpdateDBGrid();
+        }
+
+        private void Grid_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.LeftShift)
+                shiftPressed = true;
+        }
+
+        private void Grid_PreviewKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.LeftShift)
+                shiftPressed = false;
         }
     }
 }

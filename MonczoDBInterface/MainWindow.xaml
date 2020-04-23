@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MonczoDBInterface"
         mc:Ignorable="d"
         Title="MonczoDB" Height="600" Width="1200">
-    <Grid>
+    <Grid PreviewKeyDown="Grid_PreviewKeyDown" PreviewKeyUp="Grid_PreviewKeyUp">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="28*"/>
             <ColumnDefinition Width="121*"/>
@@ -67,7 +67,7 @@
             <TextBlock x:Name="StatusText" Text="Ready" FontSize="14" Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"/>
         </Grid>
 
-        <Grid x:Name="DBGrid" Grid.Column="1" ShowGridLines="True" PreviewMouseWheel="DBGrid_PreviewMouseWheel">
+        <Grid x:Name="DBGrid" Grid.Column="1" ShowGridLines="True" PreviewMouseWheel="DBGrid_PreviewMouseWheel" Margin="0,0,20,0">
             <Grid.RowDefinitions>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
