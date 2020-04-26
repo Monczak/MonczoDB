@@ -421,10 +421,16 @@ namespace MonczoDBInterface
             await UpdateDBGrid();
         }
 
-        private void Grid_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private async void Grid_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.LeftShift)
                 shiftPressed = true;
+
+            if (e.Key == Key.Escape)
+            {
+                DeselectAll();
+                await UpdateDBGrid();
+            }
         }
 
         private void Grid_PreviewKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
