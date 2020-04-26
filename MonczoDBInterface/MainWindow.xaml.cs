@@ -69,6 +69,18 @@ namespace MonczoDBInterface
             }
         }
 
+        void HandleCellReturn(System.Windows.Controls.TextBox box, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                DBCell cell = visibleCells[box];
+                DBInterface.db.records[cell.recordID].Set(cell.column, box.Text);
+
+                Keyboard.ClearFocus();
+            }
+
+        }
+
         DBCell GetCellAt(int recordID, int column)
         {
             return visibleCells[cellIndices[new Tuple<int, int>(recordID, column)]];
@@ -97,6 +109,8 @@ namespace MonczoDBInterface
 
             DBGrid.RowDefinitions.Clear();
             DBGrid.ColumnDefinitions.Clear();
+
+            DBGrid.Children.Clear();
 
             cellIndices = new Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox>();
             visibleCells = new Dictionary<System.Windows.Controls.TextBox, DBCell>();
@@ -164,6 +178,8 @@ namespace MonczoDBInterface
                         Grid.SetRow(box, i - topRecordIndex + 1);
                         Grid.SetColumn(box, j);
 
+                        box.KeyDown += (obj, e) => HandleCellReturn((System.Windows.Controls.TextBox)obj, e);
+
                         if (!visibleCells.ContainsKey(box))
                         {
                             visibleCells[box] = new DBCell()
@@ -181,7 +197,21 @@ namespace MonczoDBInterface
 
         private async void FileNewBtn_Click(object sender, RoutedEventArgs e)
         {
+            DBInterface.db = new Database();
 
+            isBusy = false;
+            hasFileLoaded = true;
+
+            visibleRecords = 25;
+            topRecordIndex = 0;
+
+            shiftPressed = false;
+
+            selectedColumn = null;
+            selectedRecord = -1;
+
+            await CreateNewDBGrid();
+            await UpdateDBGrid();
         }
 
         private async void FileLoadBtn_Click(object sender, RoutedEventArgs e)
@@ -289,22 +319,41 @@ namespace MonczoDBInterface
 
         private async void DataInsertColumnBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (selectedColumn == null)
+            {
+                DBInterface.db.AddColumn("New Column");
 
+                UpdateStatusText("Updating records...");
+                await DBInterface.db.UpdateRecords();
+                UpdateStatusText("Ready");
+
+                await CreateNewDBGrid();
+                await UpdateDBGrid();
+            }
         }
 
         private async void DataDeleteColumnBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (selectedColumn != null)
+            {
+                DBInterface.db.RemoveColumn(selectedColumn);
 
+                selectedColumn = null;
+
+                UpdateStatusText("Updating records...");
+                await DBInterface.db.UpdateRecords();
+                UpdateStatusText("Ready");
+
+                await CreateNewDBGrid();
+                await UpdateDBGrid();
+            }
         }
 
         private async void DataSortAscendingBtn_Click(object sender, RoutedEventArgs e)
         {
             if (selectedColumn != null)
             {
-                UpdateStatusText($"Sorting by {selectedColumn}...");
-                DBInterface.db.records = await DBInterface.db.SortByAsync(selectedColumn, SortingDirection.Ascending);
-                UpdateStatusText("Ready");
-                await UpdateDBGrid();
+                await SortTask(SortingDirection.Ascending);
             }
         }
 
@@ -312,11 +361,24 @@ namespace MonczoDBInterface
         {
             if (selectedColumn != null)
             {
-                UpdateStatusText($"Sorting by {selectedColumn}...");
-                DBInterface.db.records = await DBInterface.db.SortByAsync(selectedColumn, SortingDirection.Descending);
-                UpdateStatusText("Ready");
-                await UpdateDBGrid();
+                await SortTask(SortingDirection.Descending);
             }
+        }
+
+        // TODO: Proper exception handling
+        private async Task SortTask(SortingDirection dir)
+        {
+            UpdateStatusText($"Sorting by {selectedColumn}...");
+            try
+            {
+                DBInterface.db.records = await DBInterface.db.SortByAsync(selectedColumn, dir);
+                UpdateStatusText("Ready");
+            }
+            catch (Exception)
+            {
+                UpdateStatusText("Cannot sort!");
+            }
+            await UpdateDBGrid();
         }
 
         private async void DataFilterBtn_Click(object sender, RoutedEventArgs e)

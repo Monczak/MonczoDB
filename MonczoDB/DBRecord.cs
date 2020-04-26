@@ -12,7 +12,7 @@ namespace MonczoDB
     [Serializable]
     public class DBRecord
     {
-        private Dictionary<string, dynamic> fields;
+        public Dictionary<string, dynamic> fields;
 
         public DBRecord(List<string> columns)
         {

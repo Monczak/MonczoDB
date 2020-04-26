@@ -19,6 +19,8 @@ namespace MonczoDB
 
         public Dictionary<string, Type> columnTypes;
 
+        public List<string> addedColumns, removedColumns;
+
         public Database()
         {
             Initialize();
@@ -32,6 +34,9 @@ namespace MonczoDB
         public void Initialize()
         {
             records = new List<DBRecord>();
+
+            addedColumns = new List<string>();
+            removedColumns = new List<string>();
         }
 
         public List<string> GetColumns()
@@ -42,24 +47,29 @@ namespace MonczoDB
         public void SetColumns(List<string> cols)
         {
             columns = cols;
-            columnTypes = new Dictionary<string, Type>(cols.Count);
         }
 
         public void AddColumn(string col)
         {
-            columns.Append(col);
-            columnTypes.Add(col, null);
+            if (addedColumns == null) addedColumns = new List<string>();
+
+            columns.Add(col);
+            addedColumns.Add(col);
         }
 
         public void RemoveColumn(string col)
         {
+            if (removedColumns == null) removedColumns = new List<string>();
+
             columns.Remove(col);
-            columnTypes.Remove(col);
+            removedColumns.Add(col);
         }
 
         public void RemoveColumnAt(int index)
         {
-            columnTypes.Remove(columns[index]);
+            if (removedColumns == null) removedColumns = new List<string>();
+
+            removedColumns.Add(columns[index]);
             columns.RemoveAt(index);
         }
 
@@ -142,6 +152,38 @@ namespace MonczoDB
                 }
                 stream.Close();
                 return result;
+            });
+
+            return task;
+        }
+
+        public Task UpdateRecords()
+        {
+            Task task = Task.Factory.StartNew(() =>
+            {
+                if (addedColumns != null)
+                {
+                    foreach (string addedCol in addedColumns)
+                    {
+                        foreach (DBRecord record in records)
+                        {
+                            record.fields.Add(addedCol, null);
+                        }
+                    }
+                    addedColumns.Clear();
+                }
+
+                if (removedColumns != null)
+                {
+                    foreach (string removedCol in removedColumns)
+                    {
+                        foreach (DBRecord record in records)
+                        {
+                            record.fields.Remove(removedCol);
+                        }
+                    }
+                    removedColumns.Clear();
+                }
             });
 
             return task;
