@@ -17,6 +17,7 @@ using System.Windows.Shapes;
 using MonczoDB;
 using MonczoDBInterface.Core;
 using MessageBox = System.Windows.MessageBox;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace MonczoDBInterface
 {
@@ -38,8 +39,10 @@ namespace MonczoDBInterface
         string selectedColumn = null;
         int selectedRecord = -1;
 
-        Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox> cellIndices;
-        Dictionary<System.Windows.Controls.TextBox, DBCell> visibleCells;
+        bool columnChanged = false;
+
+        Dictionary<Tuple<int, int>, TextBox> cellIndices;
+        Dictionary<TextBox, DBCell> visibleCells;
 
         public MainWindow()
         {
@@ -59,7 +62,12 @@ namespace MonczoDBInterface
                 Title = $"MonczoDB - {text}";
         }
 
-        async void HandleColumnShiftClick(System.Windows.Controls.TextBox box, MouseButtonEventArgs e)
+        void HandleColumnTextChanged(TextBox box)
+        {
+            columnChanged = true;
+        }
+
+        async void HandleColumnShiftClick(TextBox box)
         {
             if (shiftPressed)
             {
@@ -70,19 +78,19 @@ namespace MonczoDBInterface
             }
         }
 
-        async void HandleCellShiftClick(System.Windows.Controls.TextBox box, MouseButtonEventArgs e)
+        async void HandleCellShiftClick(TextBox box)
         {
             // TODO: Maybe change this to Alt, so as to make selecting multiple records possible
             if (shiftPressed)
             {
                 DeselectAll();
-                selectedRecord = visibleCells[box].recordID;
+                selectedRecord = visibleCells[box].recordID + topRecordIndex;
                 UpdateStatusText($"Selected record {selectedRecord}");
                 await SelectRecord(selectedRecord);
             }
         }
 
-        void HandleCellReturn(System.Windows.Controls.TextBox box, System.Windows.Input.KeyEventArgs e)
+        void HandleCellReturn(TextBox box, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
@@ -90,16 +98,14 @@ namespace MonczoDBInterface
             }
         }
 
-        void HandleCellLostFocus(System.Windows.Controls.TextBox box)
+        void HandleCellLostFocus(TextBox box)
         {
             UpdateCell(box);
         }
 
-        private void UpdateCell(System.Windows.Controls.TextBox box)
+        private void UpdateCell(TextBox box)
         {
             DBCell cell = visibleCells[box];
-
-            UpdateStatusText(box.Text);
 
             // Ducktyping?
             if (int.TryParse(box.Text, out int iResult))
@@ -112,7 +118,7 @@ namespace MonczoDBInterface
             Keyboard.ClearFocus();
         }
 
-        async void HandleColumnReturn(System.Windows.Controls.TextBox box, System.Windows.Input.KeyEventArgs e)
+        async void HandleColumnReturn(TextBox box, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
@@ -120,28 +126,33 @@ namespace MonczoDBInterface
             }
         }
 
-        async void HandleColumnLostFocus(System.Windows.Controls.TextBox box)
+        async void HandleColumnLostFocus(TextBox box)
         {
             await UpdateColumn(box);
         }
 
-        private async Task UpdateColumn(System.Windows.Controls.TextBox box)
+        private async Task UpdateColumn(TextBox box)
         {
-            string oldName = visibleCells[box].column;
-
-            try
+            if (columnChanged)
             {
-                UpdateStatusText("Updating records...");
-                await DBInterface.db.RenameColumn(oldName, box.Text);
-                visibleCells[box].column = box.Text;
-                UpdateStatusText("Ready");
+                string oldName = visibleCells[box].column;
 
-                Keyboard.ClearFocus();
+                try
+                {
+                    UpdateStatusText("Updating records...");
+                    await DBInterface.db.RenameColumn(oldName, box.Text);
+                    visibleCells[box].column = box.Text;
+                    UpdateStatusText("Ready");
+
+                    Keyboard.ClearFocus();
+                }
+                catch (Exception ex)
+                {
+                    UpdateStatusText(ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                UpdateStatusText(ex.Message);
-            }
+            columnChanged = false;
+            
         }
 
         DBCell GetCellAt(int recordID, int column)
@@ -161,7 +172,7 @@ namespace MonczoDBInterface
         {
             for (int i = 0; i < columns.Count; i++)
             {
-                GetCellAt(recordID, i).selected = true;
+                GetCellAt(recordID - topRecordIndex, i).selected = true;
             }
 
             await UpdateDBGrid();
@@ -188,8 +199,8 @@ namespace MonczoDBInterface
 
             DBGrid.Children.Clear();
 
-            cellIndices = new Dictionary<Tuple<int, int>, System.Windows.Controls.TextBox>();
-            visibleCells = new Dictionary<System.Windows.Controls.TextBox, DBCell>();
+            cellIndices = new Dictionary<Tuple<int, int>, TextBox>();
+            visibleCells = new Dictionary<TextBox, DBCell>();
 
             for (int i = 0; i < visibleRecords + 1; i++)
             {
@@ -207,16 +218,18 @@ namespace MonczoDBInterface
                     MaxWidth = 100
                 });
 
-                var box = new System.Windows.Controls.TextBox()
+                var box = new TextBox()
                 {
                     Text = columns[i],
                     FontSize = 14,
                     Background = new SolidColorBrush(new Color() { R = 0xdd, G = 0xdd, B = 0xdd, A = 0xff })
                 };
 
-                box.PreviewMouseDown += (obj, e) => HandleColumnShiftClick((System.Windows.Controls.TextBox)obj, e);
-                box.KeyDown += (obj, e) => HandleColumnReturn((System.Windows.Controls.TextBox)obj, e);
-                box.LostFocus += (obj, e) => HandleColumnLostFocus((System.Windows.Controls.TextBox)obj);
+                box.PreviewMouseDown += (obj, _) => HandleColumnShiftClick((TextBox)obj);
+                box.KeyDown += (obj, e) => HandleColumnReturn((TextBox)obj, e);
+                box.LostFocus += (obj, e) => HandleColumnLostFocus((TextBox)obj);
+
+                box.TextChanged += (obj, _) => HandleColumnTextChanged((TextBox)obj);
 
                 if (!visibleCells.ContainsKey(box))
                 {
@@ -246,7 +259,7 @@ namespace MonczoDBInterface
                     }
                     else
                     {
-                        var box = new System.Windows.Controls.TextBox()
+                        var box = new TextBox()
                         {
                             Text = Convert.ToString(DBInterface.db.records[i].Get(columns[j])),
                             FontSize = 14
@@ -257,9 +270,9 @@ namespace MonczoDBInterface
                         Grid.SetRow(box, i - topRecordIndex + 1);
                         Grid.SetColumn(box, j);
 
-                        box.PreviewMouseDown += (obj, e) => HandleCellShiftClick((System.Windows.Controls.TextBox)obj, e);
-                        box.KeyDown += (obj, e) => HandleCellReturn((System.Windows.Controls.TextBox)obj, e);
-                        box.LostFocus += (obj, e) => HandleCellLostFocus((System.Windows.Controls.TextBox)obj);
+                        box.PreviewMouseDown += (obj, _) => HandleCellShiftClick((TextBox)obj);
+                        box.KeyDown += (obj, e) => HandleCellReturn((TextBox)obj, e);
+                        box.LostFocus += (obj, e) => HandleCellLostFocus((TextBox)obj);
 
                         if (!visibleCells.ContainsKey(box))
                         {
@@ -481,16 +494,20 @@ namespace MonczoDBInterface
 
         private async void DBGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (e.Delta < 0)
+            if (selectedRecord != -1 && selectedRecord >= topRecordIndex && selectedRecord < topRecordIndex + visibleRecords)
             {
-                topRecordIndex++;
-                topRecordIndex = Math.Min(topRecordIndex, DBInterface.db.records.Count - visibleRecords);
+                for (int i = 0; i < columns.Count; i++)
+                {
+                    GetCellAt(selectedRecord - topRecordIndex, i).selected = false;
+                }
             }
-            else if (e.Delta > 0)
-            {
-                topRecordIndex--;
-                topRecordIndex = Math.Max(topRecordIndex, 0);
-            }
+
+            topRecordIndex -= e.Delta / 120;
+            topRecordIndex = Math.Min(topRecordIndex, DBInterface.db.records.Count - visibleRecords);
+            topRecordIndex = Math.Max(topRecordIndex, 0);
+
+            if (selectedRecord >= topRecordIndex && selectedRecord < topRecordIndex + visibleRecords)
+                await SelectRecord(selectedRecord);
 
             DBGridScrollBar.Value = (double)topRecordIndex / (DBInterface.db.records.Count - visibleRecords);
 
@@ -499,6 +516,14 @@ namespace MonczoDBInterface
 
         private async void DBGridScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
+            if (selectedRecord != -1 && selectedRecord >= topRecordIndex && selectedRecord < topRecordIndex + visibleRecords)
+            {
+                for (int i = 0; i < columns.Count; i++)
+                {
+                    GetCellAt(selectedRecord - topRecordIndex, i).selected = false;
+                }
+            }
+
             int newIndex;
             try
             {
@@ -510,6 +535,9 @@ namespace MonczoDBInterface
             }
 
             topRecordIndex = newIndex;
+
+            if (selectedRecord >= topRecordIndex && selectedRecord < topRecordIndex + visibleRecords)
+                await SelectRecord(selectedRecord);
 
             await UpdateDBGrid();
         }
@@ -523,6 +551,7 @@ namespace MonczoDBInterface
             {
                 DeselectAll();
                 await UpdateDBGrid();
+                UpdateStatusText("Ready");
             }
         }
 
