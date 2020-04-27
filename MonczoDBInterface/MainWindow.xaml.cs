@@ -16,6 +16,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using MonczoDB;
 using MonczoDBInterface.Core;
+using MessageBox = System.Windows.MessageBox;
 
 namespace MonczoDBInterface
 {
@@ -69,16 +70,78 @@ namespace MonczoDBInterface
             }
         }
 
+        async void HandleCellShiftClick(System.Windows.Controls.TextBox box, MouseButtonEventArgs e)
+        {
+            // TODO: Maybe change this to Alt, so as to make selecting multiple records possible
+            if (shiftPressed)
+            {
+                DeselectAll();
+                selectedRecord = visibleCells[box].recordID;
+                UpdateStatusText($"Selected record {selectedRecord}");
+                await SelectRecord(selectedRecord);
+            }
+        }
+
         void HandleCellReturn(System.Windows.Controls.TextBox box, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                DBCell cell = visibleCells[box];
+                UpdateCell(box);
+            }
+        }
+
+        void HandleCellLostFocus(System.Windows.Controls.TextBox box)
+        {
+            UpdateCell(box);
+        }
+
+        private void UpdateCell(System.Windows.Controls.TextBox box)
+        {
+            DBCell cell = visibleCells[box];
+
+            UpdateStatusText(box.Text);
+
+            // Ducktyping?
+            if (int.TryParse(box.Text, out int iResult))
+                DBInterface.db.records[cell.recordID].Set(cell.column, iResult);
+            else if (double.TryParse(box.Text, out double dResult))
+                DBInterface.db.records[cell.recordID].Set(cell.column, dResult);
+            else
                 DBInterface.db.records[cell.recordID].Set(cell.column, box.Text);
+
+            Keyboard.ClearFocus();
+        }
+
+        async void HandleColumnReturn(System.Windows.Controls.TextBox box, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                await UpdateColumn(box);
+            }
+        }
+
+        async void HandleColumnLostFocus(System.Windows.Controls.TextBox box)
+        {
+            await UpdateColumn(box);
+        }
+
+        private async Task UpdateColumn(System.Windows.Controls.TextBox box)
+        {
+            string oldName = visibleCells[box].column;
+
+            try
+            {
+                UpdateStatusText("Updating records...");
+                await DBInterface.db.RenameColumn(oldName, box.Text);
+                visibleCells[box].column = box.Text;
+                UpdateStatusText("Ready");
 
                 Keyboard.ClearFocus();
             }
-
+            catch (Exception ex)
+            {
+                UpdateStatusText(ex.Message);
+            }
         }
 
         DBCell GetCellAt(int recordID, int column)
@@ -91,6 +154,17 @@ namespace MonczoDBInterface
             foreach (DBCell cell in visibleCells.Values) cell.selected = false;
             selectedColumn = null;
             selectedRecord = -1;
+            Keyboard.ClearFocus();
+        }
+
+        public async Task SelectRecord(int recordID)
+        {
+            for (int i = 0; i < columns.Count; i++)
+            {
+                GetCellAt(recordID, i).selected = true;
+            }
+
+            await UpdateDBGrid();
         }
 
         public async Task SelectColumn(string column)
@@ -105,6 +179,8 @@ namespace MonczoDBInterface
 
         public async Task CreateNewDBGrid()
         {
+            GC.Collect();
+
             topRecordIndex = 0;
 
             DBGrid.RowDefinitions.Clear();
@@ -137,7 +213,10 @@ namespace MonczoDBInterface
                     FontSize = 14,
                     Background = new SolidColorBrush(new Color() { R = 0xdd, G = 0xdd, B = 0xdd, A = 0xff })
                 };
+
                 box.PreviewMouseDown += (obj, e) => HandleColumnShiftClick((System.Windows.Controls.TextBox)obj, e);
+                box.KeyDown += (obj, e) => HandleColumnReturn((System.Windows.Controls.TextBox)obj, e);
+                box.LostFocus += (obj, e) => HandleColumnLostFocus((System.Windows.Controls.TextBox)obj);
 
                 if (!visibleCells.ContainsKey(box))
                 {
@@ -178,7 +257,9 @@ namespace MonczoDBInterface
                         Grid.SetRow(box, i - topRecordIndex + 1);
                         Grid.SetColumn(box, j);
 
+                        box.PreviewMouseDown += (obj, e) => HandleCellShiftClick((System.Windows.Controls.TextBox)obj, e);
                         box.KeyDown += (obj, e) => HandleCellReturn((System.Windows.Controls.TextBox)obj, e);
+                        box.LostFocus += (obj, e) => HandleCellLostFocus((System.Windows.Controls.TextBox)obj);
 
                         if (!visibleCells.ContainsKey(box))
                         {
@@ -250,7 +331,8 @@ namespace MonczoDBInterface
                     await CreateNewDBGrid();
                     await UpdateDBGrid();
                 }
-                
+
+                isBusy = false;
             }
         }
 
@@ -319,9 +401,16 @@ namespace MonczoDBInterface
 
         private async void DataInsertColumnBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedColumn == null)
+            try
             {
-                DBInterface.db.AddColumn("New Column");
+                if (selectedColumn == null)
+                {
+                    DBInterface.db.AddColumn("New Column");
+                }
+                else
+                {
+                    DBInterface.db.InsertColumn("New Column", columns.IndexOf(selectedColumn));
+                }
 
                 UpdateStatusText("Updating records...");
                 await DBInterface.db.UpdateRecords();
@@ -329,6 +418,10 @@ namespace MonczoDBInterface
 
                 await CreateNewDBGrid();
                 await UpdateDBGrid();
+            }
+            catch (Exception)
+            {
+                UpdateStatusText("Can't insert new column.\nTry renaming New Column.");
             }
         }
 
@@ -383,7 +476,7 @@ namespace MonczoDBInterface
 
         private async void DataFilterBtn_Click(object sender, RoutedEventArgs e)
         {
-
+            MessageBox.Show("Feature coming soon!", "Can't have everything, y'know", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private async void DBGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)

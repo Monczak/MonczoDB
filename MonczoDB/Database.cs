@@ -14,7 +14,7 @@ namespace MonczoDB
     [Serializable]
     public class Database
     {
-        private List<string> columns;
+        public List<string> columns;
         public List<DBRecord> records;
 
         public Dictionary<string, Type> columnTypes;
@@ -53,7 +53,21 @@ namespace MonczoDB
         {
             if (addedColumns == null) addedColumns = new List<string>();
 
+            if (columns.Contains(col))
+                throw new Exception("Cannot add existing column");
+
             columns.Add(col);
+            addedColumns.Add(col);
+        }
+
+        public void InsertColumn(string col, int index)
+        {
+            if (addedColumns == null) addedColumns = new List<string>();
+
+            if (columns.Contains(col))
+                throw new Exception("Cannot add existing column");
+
+            columns.Insert(index, col);
             addedColumns.Add(col);
         }
 
@@ -71,6 +85,28 @@ namespace MonczoDB
 
             removedColumns.Add(columns[index]);
             columns.RemoveAt(index);
+        }
+
+        public Task RenameColumn(string oldName, string newName)
+        {
+            if (columns.Contains(newName))
+            {
+                throw new Exception($"Column {newName} already exists!");
+            }
+
+            Task task = Task.Factory.StartNew(() =>
+            {
+                foreach (DBRecord record in records)
+                {
+                    dynamic value = record.Get(oldName);
+                    record.fields.Remove(oldName);
+                    record.fields[newName] = value;
+                }
+
+                columns[columns.IndexOf(oldName)] = newName;
+            });
+
+            return task;
         }
 
         public void InsertRecord(int index, params dynamic[] values)
