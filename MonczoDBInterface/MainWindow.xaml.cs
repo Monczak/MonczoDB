@@ -41,6 +41,8 @@ namespace MonczoDBInterface
 
         bool columnChanged = false;
 
+        bool suppressCellUpdate = false;
+
         Dictionary<Tuple<int, int>, TextBox> cellIndices;
         Dictionary<TextBox, DBCell> visibleCells;
 
@@ -105,17 +107,21 @@ namespace MonczoDBInterface
 
         private void UpdateCell(TextBox box)
         {
-            DBCell cell = visibleCells[box];
+            if (!suppressCellUpdate)
+            {
+                DBCell cell = visibleCells[box];
 
-            // Ducktyping?
-            if (int.TryParse(box.Text, out int iResult))
-                DBInterface.db.records[cell.recordID].Set(cell.column, iResult);
-            else if (double.TryParse(box.Text, out double dResult))
-                DBInterface.db.records[cell.recordID].Set(cell.column, dResult);
-            else
-                DBInterface.db.records[cell.recordID].Set(cell.column, box.Text);
+                // Ducktyping?
+                if (int.TryParse(box.Text, out int iResult))
+                    DBInterface.db.records[cell.recordID + topRecordIndex].Set(cell.column, iResult);
+                else if (double.TryParse(box.Text, out double dResult))
+                    DBInterface.db.records[cell.recordID + topRecordIndex].Set(cell.column, dResult);
+                else
+                    DBInterface.db.records[cell.recordID + topRecordIndex].Set(cell.column, box.Text);
 
-            Keyboard.ClearFocus();
+                Keyboard.ClearFocus();
+            }
+            
         }
 
         async void HandleColumnReturn(TextBox box, System.Windows.Input.KeyEventArgs e)
@@ -404,12 +410,29 @@ namespace MonczoDBInterface
 
         private async void DataInsertRecordBtn_Click(object sender, RoutedEventArgs e)
         {
-
+            if (selectedRecord == -1)
+            {
+                DBRecord newRecord = new DBRecord(columns);
+                DBInterface.db.AddRecordObject(newRecord);
+                UpdateStatusText(DBInterface.db.records.Count.ToString());
+                topRecordIndex = DBInterface.db.records.Count - visibleRecords;
+            }
+            else
+            {
+                DBInterface.db.InsertRecordObject(selectedRecord, new DBRecord(columns));
+            }
+            DeselectAll();
+            await UpdateDBGrid();
         }
 
         private async void DataDeleteRecordBtn_Click(object sender, RoutedEventArgs e)
         {
-
+            if (selectedRecord != -1)
+            {
+                DBInterface.db.RemoveRecordAt(selectedRecord);
+                DeselectAll();
+                await UpdateDBGrid();
+            }
         }
 
         private async void DataInsertColumnBtn_Click(object sender, RoutedEventArgs e)

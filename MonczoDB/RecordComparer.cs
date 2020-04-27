@@ -19,8 +19,24 @@ namespace MonczoDB
 
         public int Compare(DBRecord x, DBRecord y)
         {
-            if (x == null) return -1;
-            if (y == null) return 1;
+            if (x == null)
+            {
+                if (y == null) return 0;
+                return direction == SortingDirection.Ascending ? -1 : 1;
+            }
+            if (y == null)
+            {
+                if (x == null) return 0;
+                return direction == SortingDirection.Ascending ? 1 : -1;
+            }
+
+            if (x.Get(column) == null && y.Get(column) == null)
+                return 0;
+
+            if (x.Get(column) == null)
+                return direction == SortingDirection.Ascending ? -1 : 1;
+            if (y.Get(column) == null)
+                return direction == SortingDirection.Ascending ? 1 : -1;
 
             if (x.Get(column).GetType() != y.Get(column).GetType()) return Convert.ToString(x.Get(column)).CompareTo(Convert.ToString(y.Get(column)));
 

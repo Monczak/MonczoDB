@@ -109,9 +109,19 @@ namespace MonczoDB
             return task;
         }
 
+        public void InsertRecordObject(int index, DBRecord record)
+        {
+            records.Insert(index, record);
+        }
+
         public void InsertRecord(int index, params dynamic[] values)
         {
             records.Insert(index, new DBRecord(columns, values));
+        }
+
+        public void AddRecordObject(DBRecord record)
+        {
+            records.Add(record);
         }
 
         public void AddRecord(params dynamic[] values)
