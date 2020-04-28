@@ -646,7 +646,7 @@ namespace MonczoDBInterface
                 await SelectRecord(selectedRecord);
 
             if (DBInterface.db.records.Count >= visibleRecords)
-                DBGridScrollBar.Value = (double)topRecordIndex / DBInterface.db.records.Count - visibleRecords;
+                DBGridScrollBar.Value = (double)topRecordIndex / (DBInterface.db.records.Count - visibleRecords);
 
             await UpdateDBGrid();
         }
