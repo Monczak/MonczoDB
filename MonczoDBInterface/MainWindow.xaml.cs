@@ -35,6 +35,7 @@ namespace MonczoDBInterface
         List<string> columns;
 
         bool shiftPressed = false;
+        bool ctrlPressed = false;
 
         string selectedColumn = null;
         int selectedRecord = -1;
@@ -42,6 +43,8 @@ namespace MonczoDBInterface
         bool columnChanged = false;
 
         bool suppressCellUpdate = false;
+
+        bool fileHasChanges = false;
 
         Dictionary<Tuple<int, int>, TextBox> cellIndices;
         Dictionary<TextBox, DBCell> visibleCells;
@@ -71,7 +74,7 @@ namespace MonczoDBInterface
 
         async void HandleColumnShiftClick(TextBox box)
         {
-            if (shiftPressed)
+            if (ctrlPressed)
             {
                 DeselectAll();
                 selectedColumn = box.Text;
@@ -83,7 +86,7 @@ namespace MonczoDBInterface
         async void HandleCellShiftClick(TextBox box)
         {
             // TODO: Maybe change this to Alt, so as to make selecting multiple records possible
-            if (shiftPressed)
+            if (ctrlPressed)
             {
                 DeselectAll();
                 selectedRecord = visibleCells[box].recordID + topRecordIndex;
@@ -111,14 +114,17 @@ namespace MonczoDBInterface
             {
                 DBCell cell = visibleCells[box];
 
-                // Ducktyping?
-                if (int.TryParse(box.Text, out int iResult))
-                    DBInterface.db.records[cell.recordID + topRecordIndex].Set(cell.column, iResult);
-                else if (double.TryParse(box.Text, out double dResult))
+                // Spaghetti ducktyping?
+                if (box.Text.EndsWith(".0") && double.TryParse(box.Text, out double dResult))
                     DBInterface.db.records[cell.recordID + topRecordIndex].Set(cell.column, dResult);
+                else if (int.TryParse(box.Text, out int iResult))
+                    DBInterface.db.records[cell.recordID + topRecordIndex].Set(cell.column, iResult);
+                else if (double.TryParse(box.Text, out double dResult2))
+                    DBInterface.db.records[cell.recordID + topRecordIndex].Set(cell.column, dResult2);
                 else
                     DBInterface.db.records[cell.recordID + topRecordIndex].Set(cell.column, box.Text);
 
+                UpdateUnsavedChanges(true);
                 Keyboard.ClearFocus();
             }
             
@@ -147,6 +153,7 @@ namespace MonczoDBInterface
                 {
                     UpdateStatusText("Updating records...");
                     await DBInterface.db.RenameColumn(oldName, box.Text);
+                    UpdateUnsavedChanges(true);
                     visibleCells[box].column = box.Text;
                     UpdateStatusText("Ready");
 
@@ -187,7 +194,7 @@ namespace MonczoDBInterface
         public async Task SelectColumn(string column)
         {
             int colIndex = columns.IndexOf(column);
-            for (int i = 0; i < visibleRecords; i++)
+            for (int i = 0; i < Math.Min(DBInterface.db.records.Count, visibleRecords); i++)
             {
                 GetCellAt(i, colIndex).selected = true;
             }
@@ -295,23 +302,59 @@ namespace MonczoDBInterface
             }
         } 
 
+        private void UpdateUnsavedChanges(bool newStatus)
+        {
+            if (fileHasChanges = newStatus) // This is deliberate
+                SetTitle($"{System.IO.Path.GetFileName(DBInterface.currentFilePath)} (*)");
+            else
+                SetTitle(System.IO.Path.GetFileName(DBInterface.currentFilePath));
+        }
+
+        private MessageBoxResult ShowUnsavedChangesWarning()
+        {
+            return MessageBox.Show("There are unsaved changes. Would you like to continue?", "Warning - Unsaved Changes", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        }
+
         private async void FileNewBtn_Click(object sender, RoutedEventArgs e)
         {
-            DBInterface.db = new Database();
+            if (!isBusy)
+            {
+                isBusy = true;
+                if (fileHasChanges)
+                {
+                    if (ShowUnsavedChangesWarning() != MessageBoxResult.Yes)
+                    {
+                        isBusy = false;
+                        return;
+                    }
+                }
+                DBInterface.db = new Database();
 
-            isBusy = false;
-            hasFileLoaded = true;
+                columns = new List<string>() { "New Column" };
+                DBInterface.db.SetColumns(columns);
+                DBInterface.db.AddRecordObject(new DBRecord(columns));
 
-            visibleRecords = 25;
-            topRecordIndex = 0;
+                isBusy = false;
+                hasFileLoaded = true;
 
-            shiftPressed = false;
+                visibleRecords = 25;
+                topRecordIndex = 0;
 
-            selectedColumn = null;
-            selectedRecord = -1;
+                shiftPressed = false;
+                ctrlPressed = false;
 
-            await CreateNewDBGrid();
-            await UpdateDBGrid();
+                UpdateUnsavedChanges(false);
+                SetTitle(null);
+                DBInterface.currentFilePath = null;
+
+                selectedColumn = null;
+                selectedRecord = -1;
+
+                await CreateNewDBGrid();
+                await UpdateDBGrid();
+                isBusy = false;
+            }
+           
         }
 
         private async void FileLoadBtn_Click(object sender, RoutedEventArgs e)
@@ -319,6 +362,15 @@ namespace MonczoDBInterface
             if (!isBusy)
             {
                 isBusy = true;
+
+                if (fileHasChanges)
+                {
+                    if (ShowUnsavedChangesWarning() != MessageBoxResult.Yes)
+                    {
+                        isBusy = false;
+                        return;
+                    }
+                }
 
                 FileDialog fileDialog = new OpenFileDialog
                 {
@@ -342,8 +394,8 @@ namespace MonczoDBInterface
                     UpdateStatusText($"Loading {System.IO.Path.GetFileName(filePath)}...");
                     await DBInterface.LoadFromFile(filePath);
                     UpdateStatusText("Ready");
-                    isBusy = false;
                     hasFileLoaded = true;
+                    UpdateUnsavedChanges(false);
 
                     SetTitle(System.IO.Path.GetFileName(filePath));
 
@@ -370,6 +422,8 @@ namespace MonczoDBInterface
                 UpdateStatusText($"Saving {System.IO.Path.GetFileName(DBInterface.currentFilePath)}...");
                 await DBInterface.SaveFile(DBInterface.currentFilePath);
                 UpdateStatusText("Ready");
+
+                UpdateUnsavedChanges(false);
 
                 isBusy = false;
             }
@@ -403,6 +457,10 @@ namespace MonczoDBInterface
                 await DBInterface.SaveFile(filePath);
                 UpdateStatusText("Ready");
 
+                DBInterface.currentFilePath = filePath;
+
+                UpdateUnsavedChanges(false);
+
                 isBusy = false;
             }
             
@@ -410,87 +468,142 @@ namespace MonczoDBInterface
 
         private async void DataInsertRecordBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedRecord == -1)
+            if (!isBusy)
             {
-                DBRecord newRecord = new DBRecord(columns);
-                DBInterface.db.AddRecordObject(newRecord);
-                UpdateStatusText(DBInterface.db.records.Count.ToString());
-                topRecordIndex = DBInterface.db.records.Count - visibleRecords;
+                isBusy = true;
+                if (selectedRecord == -1)
+                {
+                    DBRecord newRecord = new DBRecord(columns);
+                    DBInterface.db.AddRecordObject(newRecord);
+                    topRecordIndex = Math.Max(0, DBInterface.db.records.Count - visibleRecords);
+                }
+                else
+                {
+                    DBInterface.db.InsertRecordObject(selectedRecord, new DBRecord(columns));
+                }
+
+                UpdateUnsavedChanges(true);
+
+                DeselectAll();
+                await UpdateDBGrid();
+
+                UpdateStatusText("Ready");
+                isBusy = false;
             }
-            else
-            {
-                DBInterface.db.InsertRecordObject(selectedRecord, new DBRecord(columns));
-            }
-            DeselectAll();
-            await UpdateDBGrid();
         }
 
         private async void DataDeleteRecordBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedRecord != -1)
+            if (!isBusy)
             {
-                DBInterface.db.RemoveRecordAt(selectedRecord);
-                DeselectAll();
-                await UpdateDBGrid();
+                isBusy = true;
+                if (selectedRecord != -1)
+                {
+                    DBInterface.db.RemoveRecordAt(selectedRecord);
+                    DeselectAll();
+
+                    UpdateUnsavedChanges(true);
+
+                    await CreateNewDBGrid();
+                    await UpdateDBGrid();
+                    UpdateStatusText("Ready");
+                }
+                isBusy = false;
             }
         }
 
         private async void DataInsertColumnBtn_Click(object sender, RoutedEventArgs e)
         {
-            try
+            if (!isBusy)
             {
-                if (selectedColumn == null)
+                isBusy = true;
+                try
                 {
-                    DBInterface.db.AddColumn("New Column");
+                    if (selectedColumn == null)
+                    {
+                        DBInterface.db.AddColumn("New Column");
+                    }
+                    else
+                    {
+                        DBInterface.db.InsertColumn("New Column", columns.IndexOf(selectedColumn));
+                    }
+
+                    UpdateStatusText("Updating records...");
+                    await DBInterface.db.UpdateRecords();
+                    UpdateStatusText("Ready");
+
+                    UpdateUnsavedChanges(true);
+
+                    await CreateNewDBGrid();
+                    await UpdateDBGrid();
                 }
-                else
+                catch (Exception)
                 {
-                    DBInterface.db.InsertColumn("New Column", columns.IndexOf(selectedColumn));
+                    UpdateStatusText("Can't insert new column.\nTry renaming New Column.");
                 }
-
-                UpdateStatusText("Updating records...");
-                await DBInterface.db.UpdateRecords();
-                UpdateStatusText("Ready");
-
-                await CreateNewDBGrid();
-                await UpdateDBGrid();
+                isBusy = false;
             }
-            catch (Exception)
-            {
-                UpdateStatusText("Can't insert new column.\nTry renaming New Column.");
-            }
+           
         }
 
         private async void DataDeleteColumnBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedColumn != null)
+            if (!isBusy)
             {
-                DBInterface.db.RemoveColumn(selectedColumn);
+                isBusy = true;
+                if (selectedColumn != null)
+                {
+                    DBInterface.db.RemoveColumn(selectedColumn);
 
-                selectedColumn = null;
+                    selectedColumn = null;
 
-                UpdateStatusText("Updating records...");
-                await DBInterface.db.UpdateRecords();
-                UpdateStatusText("Ready");
+                    UpdateStatusText("Updating records...");
+                    await DBInterface.db.UpdateRecords();
+                    UpdateStatusText("Ready");
 
-                await CreateNewDBGrid();
-                await UpdateDBGrid();
+                    UpdateUnsavedChanges(true);
+
+                    await CreateNewDBGrid();
+                    await UpdateDBGrid();
+                }
+                isBusy = false;
             }
         }
 
         private async void DataSortAscendingBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedColumn != null)
+            if (!isBusy)
             {
-                await SortTask(SortingDirection.Ascending);
+                isBusy = true;
+                if (selectedColumn != null)
+                {
+                    await SortTask(SortingDirection.Ascending);
+                    UpdateUnsavedChanges(true);
+                }
+                else
+                {
+                    UpdateStatusText("Nothing to sort by.\nTry selecting a column.");
+                }
+                isBusy = false;
             }
+            
         }
 
         private async void DataSortDescendingBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedColumn != null)
+            if (!isBusy)
             {
-                await SortTask(SortingDirection.Descending);
+                isBusy = true;
+                if (selectedColumn != null)
+                {
+                    await SortTask(SortingDirection.Descending);
+                    UpdateUnsavedChanges(true);
+                }
+                else
+                {
+                    UpdateStatusText("Nothing to sort by.\nTry selecting a column.");
+                }
+                isBusy = false;
             }
         }
 
@@ -532,7 +645,8 @@ namespace MonczoDBInterface
             if (selectedRecord >= topRecordIndex && selectedRecord < topRecordIndex + visibleRecords)
                 await SelectRecord(selectedRecord);
 
-            DBGridScrollBar.Value = (double)topRecordIndex / (DBInterface.db.records.Count - visibleRecords);
+            if (DBInterface.db.records.Count >= visibleRecords)
+                DBGridScrollBar.Value = (double)topRecordIndex / DBInterface.db.records.Count - visibleRecords;
 
             await UpdateDBGrid();
         }
@@ -550,7 +664,7 @@ namespace MonczoDBInterface
             int newIndex;
             try
             {
-                newIndex = (int)Math.Round(e.NewValue * (DBInterface.db.records.Count - visibleRecords));
+                newIndex = (int)Math.Round(e.NewValue * Math.Max(0, DBInterface.db.records.Count - visibleRecords));
             }
             catch (NullReferenceException)
             {
@@ -570,6 +684,9 @@ namespace MonczoDBInterface
             if (e.Key == Key.LeftShift)
                 shiftPressed = true;
 
+            if (e.Key == Key.LeftCtrl)
+                ctrlPressed = true;
+
             if (e.Key == Key.Escape)
             {
                 DeselectAll();
@@ -582,6 +699,9 @@ namespace MonczoDBInterface
         {
             if (e.Key == Key.LeftShift)
                 shiftPressed = false;
+
+            if (e.Key == Key.LeftCtrl)
+                ctrlPressed = false;
         }
     }
 }

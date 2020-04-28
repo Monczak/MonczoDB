@@ -64,6 +64,17 @@
             </Grid>
 
             <Rectangle Grid.Row="3" Fill="#FFC9C9C9"/>
+            <Grid Grid.Row="2">
+                <TextBlock FontSize="12" VerticalAlignment="Top" Margin="5" Foreground="Gray" TextWrapping="Wrap">
+                    Helpful tips:<LineBreak/>
+                    - Hold Ctrl while clicking a column to select it<LineBreak/>
+                    - Hold Ctrl while clicking a cell to select a record<LineBreak/>
+                    - If a record/column is selected, inserting a new one will place it before the selected one<LineBreak/>
+                    - Press Esc to deselect everything<LineBreak/>
+                    <LineBreak/>
+                    &lt;/&gt; with &lt;3 by Monczak
+                </TextBlock>
+            </Grid>
             <TextBlock x:Name="StatusText" Text="Ready" FontSize="14" Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"/>
         </Grid>
 
